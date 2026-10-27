@@ -12,9 +12,11 @@ const path = require("path");
 const crypto = require("crypto");
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.ANTHROPIC_API_KEY || "";
+// "sk-"로 시작하는 진짜 키만 사용 (비워두거나 none 등을 넣으면 무료 내장 엔진으로 동작)
+const API_KEY = /^sk-/.test(process.env.ANTHROPIC_API_KEY || "") ? process.env.ANTHROPIC_API_KEY.trim() : "";
 const MODEL = process.env.AI_MODEL || "claude-haiku-5-5";
-const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "";
+// 비워두거나 none 이면 비밀번호 없이 수업을 만들 수 있음
+const TEACHER_PASSWORD = /^(none)?$/i.test((process.env.TEACHER_PASSWORD || "").trim()) ? "" : process.env.TEACHER_PASSWORD.trim();
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 // public/ 폴더가 있으면 거기서, 없으면 server.js와 같은 폴더에서 화면 파일을 찾습니다.
 const PUBLIC_DIR = fs.existsSync(path.join(__dirname, "public", "index.html")) ? path.join(__dirname, "public") : __dirname;
