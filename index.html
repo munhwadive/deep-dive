@@ -345,6 +345,7 @@ button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:trans
       const cur = st.hist[st.hist.length - 1];
       const r = await api("/api/next", { ...base(), trail: st.trail, mode, step: st.trail.length, maxStep: st.maxStep, avoid: mode === "other" && cur ? cur.choices : [] });
       if (r.unsafe) return unsafe();
+      if (r.done) { loading(false); return finish(); } // 더 파고들 곳이 없으면 결과로
       const q = { question: r.question, choices: r.choices };
       if (push) st.hist.push(q); else st.hist[st.hist.length - 1] = q;
       persist(); renderExplore();
@@ -416,7 +417,7 @@ button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:trans
     $("res-depth").textContent = `수심 ${(st.trail.length - 1) * 10}m 도착`;
     $("res-map").innerHTML = "";
     st.trail.forEach(t => { const li = document.createElement("li"); li.textContent = t; $("res-map").append(li); });
-    $("btn-more").style.display = st.extra >= 3 ? "none" : "";
+    $("btn-more").style.display = st.extra > 0 ? "none" : "";
     setDepth(1); show("s-result");
   }
   $("btn-more").onclick = async () => {
