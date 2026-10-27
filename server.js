@@ -111,51 +111,10 @@ function parseJSON(text) {
 }
 
 // ───────────────────────── 내장 질문 엔진 (AI 없을 때 / 실패 시) ─────────────────────────
-const STARTERS = {
-  축구: ["직접 하는 축구", "해외축구", "K리그", "국가대표", "선수", "축구게임"],
-  야구: ["직접 하는 야구", "프로야구 팀", "선수", "응원 문화", "경기 기록", "야구장"],
-  농구: ["직접 하는 농구", "NBA", "선수", "멋진 기술", "농구화", "팀 경기"],
-  게임: ["RPG", "액션·슈팅", "모바일 게임", "캐릭터", "게임 만들기", "e스포츠"],
-  아이돌: ["무대", "노래", "춤", "의상·콘셉트", "멤버", "팬 문화"],
-  음악: ["노래 듣기", "악기 연주", "가수", "작곡", "공연", "뮤직비디오"],
-  수학: ["도형", "숫자 퍼즐", "패턴", "계산 비법", "수학자 이야기", "생활 속 수학"],
-  과학: ["우주", "동물·생물", "실험", "로봇", "날씨", "인체"],
-  우주: ["행성", "블랙홀", "우주인", "로켓", "외계인", "별자리"],
-  역사: ["한국사", "세계사", "옛날 사람들 생활", "전쟁 이야기", "왕과 인물", "유물"],
-  강아지: ["강아지 종류", "행동과 표정", "훈련", "강아지와 사람", "돌보기", "유기견"],
-  고양이: ["고양이 종류", "행동과 표정", "고양이 마음", "돌보기", "길고양이", "고양이 사진"],
-  동물: ["반려동물", "야생동물", "바다 생물", "곤충", "멸종 위기", "동물 행동"],
-  음식: ["라면", "디저트", "길거리 음식", "요리하기", "나라별 음식", "음식 포장"],
-  그림: ["캐릭터 그리기", "웹툰", "색칠", "유명 화가", "디지털 드로잉", "낙서"],
-  영화: ["애니메이션", "히어로", "공포", "영화 만들기", "배우", "명장면"],
-  웹툰: ["좋아하는 작품", "캐릭터", "그림체", "스토리", "웹툰 작가", "웹툰 만들기"],
-  자동차: ["스포츠카", "전기차", "자동차 디자인", "레이싱", "자율주행", "자동차 만드는 법"],
-  패션: ["옷 코디", "신발", "브랜드", "색깔 조합", "옛날 패션", "옷 만들기"],
-  여행: ["다른 나라", "국내 여행", "여행 음식", "랜드마크", "여행 사진", "교통수단"],
-};
-const FACETS = [
-  null, // depth 1 handled separately
-  { q: (p) => `${p}의 어떤 점이 좋아?`, c: ["모양과 색", "사람들", "방법과 기술", "변화와 성장", "재미있는 사실", "분위기와 느낌"] },
-  { q: (p) => `${p}에서 뭐가 더 궁금해?`, c: ["어떻게 시작됐는지", "어떻게 만드는지", "왜 인기 있는지", "잘하는 비결", "실패와 도전", "미래의 모습"] },
-  { q: () => `그중에서 하나만 고른다면?`, c: ["처음 시작", "숨은 이야기", "비교해 보기", "기록과 숫자", "직접 체험", "사람들 반응"] },
-  { q: (p) => `${p}, 어떤 쪽으로 더 볼까?`, c: ["한 사람 이야기", "여러 개 비교", "옛날과 지금", "우리 주변에서", "세계에서", "직접 만들어 보기"] },
-];
-const GENERIC_START = ["보는 것", "직접 해보기", "사람·인물", "만드는 과정", "숨은 이야기", "숫자와 기록"];
-const EASY = ["보는 게 좋아", "해보는 게 좋아", "이야기가 좋아", "만드는 게 좋아", "사람이 좋아"];
+// tree.js의 분류표를 따라 "앞에서 고른 것의 하위 항목"만 보여줍니다.
+const { TREE, ASPECTS, ALIAS } = require("./tree.js");
 
-function shuffle(a) { return a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map((x) => x[1]); }
-
-function fallbackNext(trail, mode) {
-  const last = trail[trail.length - 1];
-  if (mode === "easier") return { question: "괜찮아! 그럼 이 중엔 뭐가 더 끌려?", choices: EASY };
-  if (trail.length === 1) {
-    const key = Object.keys(STARTERS).find((k) => last.includes(k));
-    return { question: `${last}에서 어떤 쪽이 더 좋아?`, choices: key ? STARTERS[key] : GENERIC_START };
-  }
-  const f = FACETS[Math.min(trail.length - 1, FACETS.length - 1)];
-  const choices = mode === "other" ? shuffle(f.c) : f.c;
-  return { question: f.q(last), choices: choices.slice(0, 6) };
-}
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "");
 // 받침에 따라 조사 고르기: j("축구","을","를") → "축구를"
 function j(word, withB, withoutB) {
   const ch = String(word).trim().slice(-1);
@@ -163,24 +122,182 @@ function j(word, withB, withoutB) {
   if (code < 0 || code > 11171) return word + withoutB;
   return word + ((code % 28) ? withB : withoutB);
 }
+const asNode = (v, label, parentKind) =>
+  Array.isArray(v) ? { q: `${label}에서 뭐가 더 끌려?`, c: v, k: parentKind || "topic" } : v;
+
+// 분류표 전체에서 이름으로 찾기 (트리 노드 또는 잎)
+function findAnywhere(name) {
+  const target = norm(name);
+  let hit = null;
+  (function walk(children, parentKind, depth) {
+    if (hit) return;
+    if (Array.isArray(children)) {
+      for (const leaf of children) if (norm(leaf) === target) { hit = { leaf, kind: parentKind || "topic" }; return; }
+      return;
+    }
+    for (const [label, v] of Object.entries(children || {})) {
+      const node = asNode(v, label, parentKind);
+      if (norm(label) === target) { hit = { node, label }; return; }
+      walk(node.c, node.k || parentKind, depth + 1);
+      if (hit) return;
+    }
+  })(TREE, null, 0);
+  return hit;
+}
+function fromAlias(to, word) {
+  if (to.startsWith("@")) return { leaf: word, kind: to.slice(1) };
+  return findAnywhere(to);
+}
+function findStart(word) {
+  const w = norm(word);
+  for (const [k, v] of Object.entries(TREE)) if (norm(k) === w) return { node: v, label: k };
+  const h = findAnywhere(word); // 분류표 안에 같은 이름이 있으면 그 위치에서 시작 (예: 피아노, 프랑스)
+  if (h) return h;
+  const alias = Object.entries(ALIAS).find(([a]) => norm(a) === w);
+  if (alias) { const h1 = fromAlias(alias[1], word); if (h1) return h1; }
+  // "축구선수가 좋아" 처럼 단어가 포함된 경우
+  for (const k of Object.keys(TREE)) if (w.includes(norm(k))) return { node: TREE[k], label: k };
+  for (const [a, to] of Object.entries(ALIAS)) if (norm(a).length >= 2 && w.includes(norm(a))) { const h2 = fromAlias(to, a); if (h2) return h2; }
+  return null;
+}
+
+// 경로를 따라가며 지금 어디에 있는지 계산
+//  tree  : 분류표 안 (하위 항목을 고르는 중)
+//  target: 대상이 정해짐 → 관점을 고를 차례
+//  aspect: 관점이 정해짐 → 세부 관점을 고를 차례
+//  deep  : 세부까지 정해짐 → 더 들어가기
+function locate(trail) {
+  const start = findStart(trail[0]);
+  let st;
+  if (!start) st = { t: "target", target: trail[0], kind: "topic" };
+  else if (start.leaf) st = { t: "target", target: start.leaf, kind: start.kind };
+  else st = nodeState(start.node, start.label);
+  st.root = trail[0];
+  for (let i = 1; i < trail.length; i++) {
+    const label = trail[i];
+    const L = norm(label);
+    if (st.t === "tree") {
+      const c = st.node.c;
+      if (Array.isArray(c)) {
+        const leaf = c.find((x) => norm(x) === L);
+        st = { ...st, t: "target", target: leaf || label, kind: leaf ? st.node.k || "topic" : "topic" };
+      } else {
+        const key = Object.keys(c).find((x) => norm(x) === L);
+        if (key) st = { ...nodeState(asNode(c[key], key, st.node.k), key), root: st.root };
+        else st = { ...st, t: "target", target: label, kind: "topic" };
+      }
+    } else if (st.t === "target") {
+      const a = ASPECTS[st.kind] || ASPECTS.topic;
+      const key = Object.keys(a.c).find((x) => norm(x) === L);
+      st = key ? { ...st, t: "aspect", aspect: key } : { ...st, t: "target", target: label, kind: "topic" };
+    } else if (st.t === "aspect") {
+      st = { ...st, t: "sub", sub: label };
+    } else if (st.t === "sub") {
+      const d = DEEP.find((x) => norm(x[0]) === L);
+      st = { ...st, t: "end", deep: d || null, deepLabel: label };
+    } else {
+      st = { ...st, t: "end", deepLabel: label };
+    }
+  }
+  return st;
+}
+function nodeState(node, label) {
+  const hasChildren = Array.isArray(node.c) ? node.c.length > 0 : Object.keys(node.c || {}).length > 0;
+  return hasChildren ? { t: "tree", node, label } : { t: "target", target: label, kind: node.k || "topic" };
+}
+
+// "더 파고들기"를 눌렀을 때만 나오는 한 단계 더 (질문에 앞 단계 말을 넣어 연결)
+const DEEP = [
+  ["어떻게 시작됐는지", "{t}의 {s}{은} 어떻게 시작됐을까?"],
+  ["가장 유명한 것", "{t}의 {s} 중 가장 유명한 건 뭘까?"],
+  ["직접 해보는 방법", "{t}의 {s}{을} 직접 해보려면 어떻게 할까?"],
+  ["다른 것과 비교", "{t}의 {s}{은} 다른 것과 뭐가 다를까?"],
+  ["숨은 비밀", "{t}의 {s}에는 어떤 비밀이 있을까?"],
+  ["앞으로의 모습", "{t}의 {s}{은} 앞으로 어떻게 바뀔까?"],
+];
+function fill(tpl, st) {
+  return tpl
+    .replace("{s}{은}", j(st.sub || "", "은", "는"))
+    .replace("{s}{을}", j(st.sub || "", "을", "를"))
+    .replace(/\{s\}/g, st.sub || "")
+    .replace(/\{t\}/g, st.target || "");
+}
+
+function pick6(list, mode, avoid) {
+  let out = list.slice();
+  if (mode === "other" && avoid && avoid.length) {
+    const rest = out.filter((x) => !avoid.includes(x));
+    out = rest.length >= 3 ? rest.concat(out.filter((x) => avoid.includes(x))) : shuffle(out);
+  }
+  return out.slice(0, 6);
+}
+function shuffle(a) { return a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map((x) => x[1]); }
+
+function fallbackNext(trail, mode, avoid, maxStep) {
+  const st = locate(trail);
+  let question, list;
+  if (st.t === "tree") {
+    question = st.node.q || `${st.label}에서 뭐가 더 끌려?`;
+    if (!question.includes(st.label) && /^어(떤|느|디)/.test(question)) question = `${st.label}에서 ${question}`;
+    list = Array.isArray(st.node.c) ? st.node.c : Object.keys(st.node.c);
+  } else if (st.t === "target") {
+    const a = ASPECTS[st.kind] || ASPECTS.topic;
+    question = a.q.replace("{x}", st.target);
+    list = Object.keys(a.c);
+  } else if (st.t === "aspect") {
+    const a = ASPECTS[st.kind] || ASPECTS.topic;
+    question = `${st.target}의 ${st.aspect} 중에서는?`;
+    list = a.c[st.aspect] || DEEP[0];
+  } else if (st.t === "sub" && (maxStep || 5) > 5) {
+    question = `${st.target}의 '${st.sub}', 뭘 더 알아볼까?`;
+    list = DEEP.map((d) => d[0]);
+  } else {
+    return { done: true }; // 더 파고들 곳이 없으면 결과로
+  }
+  if (mode === "easier") {
+    const q = st.t === "tree" ? "괜찮아! 그럼 이 중에 들어본 게 있어?" : "괜찮아! 제일 먼저 눈에 들어오는 걸 골라봐.";
+    return { question: q, choices: shuffle(list).slice(0, 4) };
+  }
+  return { question, choices: pick6(list, mode, avoid) };
+}
+
+function describe(trail) {
+  const st = locate(trail);
+  const root = trail[0];
+  const target = st.target || st.label || root;
+  const focus = st.sub || st.aspect || null;
+  return { st, root, target, focus };
+}
 function fallbackResult(trail) {
-  const first = trail[0];
-  const last = trail[trail.length - 1];
-  const mid = trail.length > 2 ? trail[1] : first;
+  const { st, root, target, focus } = describe(trail);
+  const interest = focus ? `${target}의 ${focus}` : target;
+  const rootPart = norm(root) === norm(target) ? "" : `${root} 중에서도 `;
+  let question;
+  if (st.t === "end" && st.deep) question = fill(st.deep[1], st);
+  else if (focus) question = `${target}의 '${focus}', 무엇이 특별할까?`;
+  else question = `${j(target, "은", "는")} 왜 특별할까?`;
   return {
-    interest: `${mid}의 '${last}'`,
-    summary: `너는 ${first} 전체보다, 그중에서도 '${last}' 쪽에 더 끌리는 것 같아.`,
-    question: `${first}에서 '${last}'에는 어떤 이야기가 숨어 있을까?`,
+    interest,
+    summary: `너는 ${rootPart}'${target}', 특히 '${focus || target}'에 관심이 있어 보여.`,
+    question,
   };
 }
-function fallbackExhibition(trail, interest) {
-  const first = trail[0];
-  const last = trail[trail.length - 1];
+// '로/으로' (ㄹ받침은 '로')
+function ro(word) {
+  const code = String(word).trim().slice(-1).charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return word + "로";
+  const b = code % 28;
+  return word + (b && b !== 8 ? "으로" : "로");
+}
+function fallbackExhibition(trail) {
+  const { target, focus } = describe(trail);
+  const f = focus || "이야기";
+  const long = `${ro(f)} 보는 ${target}`;
   return {
-    title: `${last}의 비밀`,
-    theme: `${j(first, "을", "를")} '${last}'의 눈으로 다시 보는 전시`,
-    show: [`${first} 사진이나 그림`, `'${last}' 관련 물건`, "비교해 볼 수 있는 자료", "내가 찾은 재미있는 사실"],
-    experience: `관객이 '${last}'에 대해 가장 궁금한 점을 포스트잇에 적어 붙이기`,
+    title: long.length <= 16 ? long : `${target}의 ${f}`,
+    theme: `${target}의 ${j(f, "을", "를")} 모아 보여주는 전시`,
+    show: [`${target}의 ${f} 사진·자료`, `${f} 비교판`, `${target} 지도·연표`, `내가 고른 ${f} 베스트 3`],
+    experience: `관객이 가장 마음에 드는 ${f}에 스티커로 투표하기`,
   };
 }
 
@@ -210,7 +327,7 @@ ${step >= maxStep - 1 ? "곧 탐색이 끝나니, 선택지가 '알아보고 싶
     return { ...sanitizeNext(await callClaude(prompt)), ai: true };
   } catch (e) {
     if (e.message !== "no_key") console.warn("AI 실패 → 내장 엔진:", e.message);
-    return { ...fallbackNext(trail, mode), ai: false };
+    return { ...fallbackNext(trail, mode, avoid, maxStep), ai: false };
   }
 }
 
@@ -254,7 +371,7 @@ async function engineExhibition(trail, interest, question) {
     return { ...r, ai: true };
   } catch (e) {
     if (e.message !== "no_key") console.warn("AI 실패 → 내장 전시:", e.message);
-    return { ...fallbackExhibition(trail, interest), ai: false };
+    return { ...fallbackExhibition(trail), ai: false };
   }
 }
 
