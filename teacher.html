@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DEEP DIVE · 강사용</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="/qrcode.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';document.head.appendChild(s)"></script>
+<style>
+:root{
+  --bg:#f3f6f8; --panel:#fff; --ink:#0b2233; --soft:#5b7184; --line:#dfe6ec;
+  --brand:#0b3b58; --accent:#ffd84d; --ok:#1f9d6b; --wip:#2a7fd4; --idle:#9aa9b6;
+  font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0a141c;--panel:#111e29;--ink:#e8f1f7;--soft:#90a6b8;--line:#203241;--idle:#5d7080}
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;word-break:keep-all}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.brand{font-weight:900;letter-spacing:.14em;font-size:14px;color:var(--brand)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brand{color:#8fe3e0}}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px}
+.btn{padding:12px 18px;border-radius:12px;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--panel)}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.warn{color:#c2412d}
+.btn.on{background:var(--accent);color:#1d1600;border-color:var(--accent)}
+input.field{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;outline:none}
+input.field:focus{border-color:var(--brand)}
+.muted{color:var(--soft);font-size:14px;line-height:1.5}
+
+/* create */
+.create{max-width:440px;margin:8vh auto;display:grid;gap:14px}
+
+/* dash */
+.grid{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.qr{background:#fff;padding:14px;border-radius:14px;display:flex;justify-content:center;margin:12px 0}
+.qr svg{width:100%;height:auto;max-width:260px;display:block}
+body.wall .qr svg{max-width:200px}
+.code{font-size:44px;font-weight:900;letter-spacing:.18em;text-align:center}
+.url{font-size:13px;word-break:break-all;background:var(--bg);padding:10px;border-radius:10px;color:var(--soft)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stat b{display:block;font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--soft);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:8px;align-content:start}
+.card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .name{font-weight:800;font-size:17px}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;white-space:nowrap}
+.pill.joined{background:var(--idle)} .pill.exploring{background:var(--wip)} .pill.complete,.pill.exhibition{background:var(--ok)}
+.trail{font-size:13px;color:var(--soft);line-height:1.5}
+.interest{font-size:17px;font-weight:800;line-height:1.35}
+.q{font-size:14px;line-height:1.45}
+.ex{font-size:14px;font-weight:700;background:var(--bg);border-radius:10px;padding:8px 10px}
+.rm{font-size:12px;color:var(--soft);text-decoration:underline;justify-self:end}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.empty{padding:40px 16px;text-align:center;color:var(--soft)}
+.warnline{font-size:12px;color:#c2412d;margin-top:8px}
+
+/* projector wall */
+body.wall .side, body.wall header .actions .hide-wall{display:none}
+body.wall .grid{grid-template-columns:1fr}
+body.wall .cards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+body.wall .card .trail, body.wall .rm{display:none}
+body.wall .interest{font-size:24px}
+body.wall .q{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="brand">DEEP DIVE · 강사용</div><h1 id="title">수업 만들기</h1></div>
+    <div class="actions" id="topActions" style="display:none">
+      <button class="btn" id="btnWall">프로젝터 화면</button>
+      <button class="btn hide-wall" id="btnEnd">탐색 종료</button>
+      <button class="btn warn hide-wall" id="btnReset">전체 초기화</button>
+      <button class="btn hide-wall" id="btnNew">새 수업</button>
+    </div>
+  </header>
+
+  <!-- 수업 만들기 -->
+  <section id="create" class="create panel" style="display:none">
+    <p class="muted">수업을 만들면 학생용 QR과 링크가 나옵니다. 학생은 회원가입 없이 이름만 적고 들어옵니다.</p>
+    <input class="field" id="inTitle" placeholder="수업 이름 (예: 1학년 3반 문화기획)" maxlength="40">
+    <input class="field" id="inPw" type="password" placeholder="강사 비밀번호" style="display:none">
+    <button class="btn primary" id="btnCreate">수업 만들기</button>
+    <p class="muted" id="createErr" style="color:#c2412d"></p>
+    <div id="recent"></div>
+    <p class="muted" id="aiNote"></p>
+  </section>
+
+  <!-- 대시보드 -->
+  <section id="dash" class="grid" style="display:none">
+    <aside class="panel side">
+      <p class="muted">학생은 이 QR을 찍거나 코드를 입력해요</p>
+      <div class="qr" id="qr"></div>
+      <div class="code" id="code"></div>
+      <p class="url" id="joinUrl" style="margin-top:10px"></p>
+      <div class="actions" style="margin-top:10px"><button class="btn" id="btnCopy" style="flex:1">학생 링크 복사</button></div>
+      <p class="warnline">이 강사용 페이지 주소는 학생에게 공유하지 마세요.</p>
+    </aside>
+    <main>
+      <div class="stats">
+        <div class="stat"><b id="nAll">0</b><span>참여 학생</span></div>
+        <div class="stat"><b id="nWip">0</b><span>탐색 중</span></div>
+        <div class="stat"><b id="nDone">0</b><span>탐색 완료</span></div>
+      </div>
+      <div class="cards" id="cards"></div>
+    </main>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LS = "deepdive:teacher";
+  const loadL = () => { try { return JSON.parse(localStorage.getItem(LS)) || []; } catch { return []; } };
+  const saveL = (v) => { try { localStorage.setItem(LS, JSON.stringify(v.slice(0, 6))); } catch {} };
+  const params = new URLSearchParams(location.search);
+  let code = (params.get("s") || "").toUpperCase(), key = params.get("k") || "";
+  let ended = false, timer = null, lastJSON = "";
+
+  async function api(path, body){
+    const r = await fetch(path, body !== undefined ? { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body) } : {});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "문제가 생겼어요.");
+    return j;
+  }
+
+  async function showCreate(){
+    $("create").style.display = ""; $("dash").style.display = "none"; $("topActions").style.display = "none";
+    $("title").textContent = "수업 만들기";
+    try {
+      const c = await api("/api/config");
+      if (c.needPassword) $("inPw").style.display = "";
+      $("aiNote").textContent = c.ai ? "AI 질문 생성: 켜짐" : "AI 키가 없어 내장 질문 엔진으로 동작합니다. (ANTHROPIC_API_KEY 설정 시 AI 모드)";
+    } catch {}
+    const rec = loadL();
+    $("recent").innerHTML = "";
+    if (rec.length) {
+      const h = document.createElement("p"); h.className = "muted"; h.style.marginTop = "6px"; h.textContent = "최근 수업 다시 열기"; $("recent").append(h);
+      rec.forEach(r => { const b = document.createElement("button"); b.className = "btn"; b.style.cssText = "width:100%;margin-top:6px;text-align:left"; b.textContent = `${r.code} · ${r.title}`; b.onclick = () => openDash(r.code, r.key); $("recent").append(b); });
+    }
+  }
+  $("btnCreate").onclick = async () => {
+    $("createErr").textContent = "";
+    try {
+      const title = $("inTitle").value.trim() || "관심 탐험 수업";
+      const r = await api("/api/session", { title, password: $("inPw").value });
+      saveL([{ code: r.code, key: r.teacherKey, title }, ...loadL().filter(x => x.code !== r.code)]);
+      openDash(r.code, r.teacherKey);
+    } catch (e) { $("createErr").textContent = e.message; }
+  };
+
+  function joinURL(){ return `${location.origin}/?s=${code}`; }
+  function openDash(c, k){
+    code = c; key = k;
+    history.replaceState(null, "", `/teacher?s=${code}&k=${key}`);
+    $("create").style.display = "none"; $("dash").style.display = ""; $("topActions").style.display = "";
+    $("code").textContent = code; $("joinUrl").textContent = joinURL();
+    $("qr").innerHTML = "";
+    drawQR(0);
+    lastJSON = ""; refresh();
+    clearInterval(timer); timer = setInterval(refresh, 3000);
+  }
+  function drawQR(tries){
+    if (typeof qrcode === "undefined") { if (tries < 20) return setTimeout(() => drawQR(tries + 1), 250); $("qr").textContent = "QR을 만들지 못했어요. 아래 링크를 사용하세요."; return; }
+    try {
+      const q = qrcode(0, "M"); q.addData(joinURL()); q.make();
+      $("qr").innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    } catch { $("qr").textContent = "QR을 만들지 못했어요. 아래 링크를 사용하세요."; }
+  }
+  $("btnCopy").onclick = async () => { try { await navigator.clipboard.writeText(joinURL()); $("btnCopy").textContent = "복사됨!"; setTimeout(() => $("btnCopy").textContent = "학생 링크 복사", 1500); } catch {} };
+
+  const STATUS = { joined: "입장", exploring: "탐색 중", complete: "관심 발견", exhibition: "전시 아이디어" };
+  async function refresh(){
+    let d;
+    try { d = await api(`/api/teacher/${code}?k=${encodeURIComponent(key)}`); }
+    catch (e) { clearInterval(timer); alert("수업을 찾을 수 없어요. 서버가 재시작되었거나 주소가 틀렸을 수 있어요."); history.replaceState(null, "", "/teacher"); return showCreate(); }
+    const j = JSON.stringify(d); if (j === lastJSON) return; lastJSON = j;
+    $("title").textContent = d.title;
+    ended = d.ended;
+    $("btnEnd").textContent = ended ? "탐색 다시 열기" : "탐색 종료";
+    $("btnEnd").classList.toggle("on", ended);
+    const s = d.students;
+    $("nAll").textContent = s.length;
+    $("nWip").textContent = s.filter(x => x.status === "exploring" || x.status === "joined").length;
+    $("nDone").textContent = s.filter(x => x.status === "complete" || x.status === "exhibition").length;
+    const box = $("cards"); box.innerHTML = "";
+    if (!s.length) { const e = document.createElement("div"); e.className = "panel empty"; e.textContent = "아직 들어온 학생이 없어요. QR을 화면에 띄워 주세요."; box.append(e); return; }
+    s.forEach(x => {
+      const c = document.createElement("div"); c.className = "card";
+      const top = document.createElement("div"); top.className = "top";
+      const n = document.createElement("span"); n.className = "name"; n.textContent = x.name;
+      const p = document.createElement("span"); p.className = "pill " + x.status; p.textContent = STATUS[x.status] || x.status;
+      top.append(n, p); c.append(top);
+      if (x.interest) { const e = document.createElement("div"); e.className = "interest"; e.textContent = x.interest; c.append(e); }
+      if (x.trail && x.trail.length) { const e = document.createElement("div"); e.className = "trail"; e.textContent = x.trail.join(" › "); c.append(e); }
+      if (x.question) { const e = document.createElement("div"); e.className = "q"; e.textContent = "❓ " + x.question; c.append(e); }
+      if (x.exhibition) { const e = document.createElement("div"); e.className = "ex"; e.textContent = `🖼️ 《${x.exhibition.title}》 — ${x.exhibition.theme}`; c.append(e); }
+      const rm = document.createElement("button"); rm.className = "rm"; rm.textContent = "목록에서 빼기";
+      rm.onclick = async () => { if (confirm(`${x.name} 학생을 목록에서 뺄까요?`)) { await api(`/api/teacher/${code}/remove?k=${encodeURIComponent(key)}`, { id: x.id }); lastJSON = ""; refresh(); } };
+      c.append(rm);
+      box.append(c);
+    });
+  }
+  $("btnEnd").onclick = async () => { await api(`/api/teacher/${code}/${ended ? "reopen" : "end"}?k=${encodeURIComponent(key)}`, {}); lastJSON = ""; refresh(); };
+  $("btnReset").onclick = async () => { if (!confirm("모든 학생 기록을 지울까요? 되돌릴 수 없어요.")) return; await api(`/api/teacher/${code}/reset?k=${encodeURIComponent(key)}`, {}); lastJSON = ""; refresh(); };
+  $("btnNew").onclick = () => { clearInterval(timer); history.replaceState(null, "", "/teacher"); showCreate(); };
+  $("btnWall").onclick = () => { const on = document.body.classList.toggle("wall"); $("btnWall").textContent = on ? "기본 화면" : "프로젝터 화면"; };
+
+  if (code && key) openDash(code, key); else showCreate();
+})();
+</script>
+</body>
+</html>
